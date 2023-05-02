@@ -6,7 +6,7 @@ from faster_whisper_live import AsyncLiveWhisper
 
 
 async def main():
-    model = AsyncLiveWhisper("large-v2", compute_type="int8_float16")
+    model = AsyncLiveWhisper("large-v2", device="cuda", compute_type="int8_float16")
 
     async with aiofiles.open("whispertest.m4a", "rb") as f:
         temp_output_length = 0

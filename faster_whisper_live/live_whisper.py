@@ -15,12 +15,24 @@ def bytes_length_to_audio_length(data):
     return len(data) / SAMPLE_RATE / 2
 
 
+def np_length_to_audio_length(data):
+    return len(data) / SAMPLE_RATE
+
+
 def audio_length_to_bytes_length(seconds):
     return math.floor(seconds * SAMPLE_RATE) * 2
 
 
+def audio_length_to_np_length(seconds):
+    return math.floor(seconds * SAMPLE_RATE)
+
+
 def get_segments(segments):
     return list(segments)
+
+
+def bytes_to_np(chunk):
+    return np.frombuffer(chunk, np.int16).flatten().astype(np.float32) / 32768.0
 
 
 class LiveWhisper:
@@ -60,19 +72,16 @@ class LiveWhisper:
 
         n_bytes = default_interval * SAMPLE_RATE * 2
 
-        chunk = f.read(n_bytes)
+        audio = bytes_to_np(f.read(n_bytes))
 
         # Have we reached the end of the file?
-        # If we have, allow text transcription to run to the end of the chunk
+        # If we have, allow text transcription to run to the end of the
         end_of_file = False
 
         try:
-            while chunk:
+            while len(audio) > 0:
                 # Determine length of chunk in seconds
-                chunk_length = bytes_length_to_audio_length(chunk)
-
-                # Convert audio from 16-bit ints to 32-bit floats
-                audio = np.frombuffer(chunk, np.int16).flatten().astype(np.float32) / 32768.0
+                chunk_length = np_length_to_audio_length(audio)
 
                 # How many seconds should we chop off of this audio chunk after this transcription run?
                 # We remove audio once we've determined that segment has been fully processed
@@ -90,7 +99,7 @@ class LiveWhisper:
                         new_start = segment.end
 
                 # Remove the beginning
-                chunk = chunk[audio_length_to_bytes_length(new_start):]
+                audio = audio[audio_length_to_np_length(new_start):]
 
                 # Load the next chunk
                 new_chunk = f.read(n_bytes)
@@ -101,7 +110,7 @@ class LiveWhisper:
                     end_of_file = True
 
                 # Append the newly chunked data to our current chunk
-                chunk += new_chunk
+                audio = np.append(audio, bytes_to_np(new_chunk))
         except KeyboardInterrupt:
             pass
         finally:
@@ -134,19 +143,16 @@ class AsyncLiveWhisper(LiveWhisper):
 
         n_bytes = default_interval * SAMPLE_RATE * 2
 
-        chunk = await f.read(n_bytes)
+        audio = bytes_to_np(await f.read(n_bytes))
 
         # Have we reached the end of the file?
         # If we have, allow text transcription to run to the end of the
         end_of_file = False
 
         try:
-            while chunk:
+            while len(audio) > 0:
                 # Determine length of chunk in seconds
-                chunk_length = bytes_length_to_audio_length(chunk)
-
-                # Convert audio from 16-bit ints to 32-bit floats
-                audio = np.frombuffer(chunk, np.int16).flatten().astype(np.float32) / 32768.0
+                chunk_length = np_length_to_audio_length(audio)
 
                 # How many seconds should we chop off of this audio chunk after this transcription run?
                 # We remove audio once we've determined that segment has been fully processed
@@ -166,7 +172,7 @@ class AsyncLiveWhisper(LiveWhisper):
                         new_start = segment.end
 
                 # Remove the beginning
-                chunk = chunk[audio_length_to_bytes_length(new_start):]
+                audio = audio[audio_length_to_np_length(new_start):]
 
                 # Load the next chunk
                 new_chunk = await f.read(n_bytes)
@@ -177,7 +183,7 @@ class AsyncLiveWhisper(LiveWhisper):
                     end_of_file = True
 
                 # Append the newly chunked data to our current chunk
-                chunk += new_chunk
+                audio = np.append(audio, bytes_to_np(new_chunk))
         except KeyboardInterrupt:
             pass
         finally:
