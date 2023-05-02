@@ -39,7 +39,7 @@ class LiveWhisper:
                                   compute_type=compute_type, cpu_threads=cpu_threads, num_workers=num_workers,
                                   download_root=download_root, local_files_only=local_files_only)
 
-    def transcribe(self, file: typing.BinaryIO, default_interval=5, chunk_margin=2, decode_audio=True,
+    def transcribe(self, file: typing.Union[typing.BinaryIO, str], default_interval=5, chunk_margin=2, decode_audio=True,
                    ignore_eof=False, ffmpeg="ffmpeg", **kwargs) -> typing.Generator[Segment, None, None]:
         """
         Transcribe an audio file. Takes a file-like object, a few settings for controlling the live
@@ -111,8 +111,9 @@ class LiveWhisper:
 class AsyncLiveWhisper(LiveWhisper):
     THREAD_POOL = concurrent.futures.ThreadPoolExecutor()
 
-    async def transcribe(self, file: asyncio.StreamReader, default_interval=5, chunk_margin=2, decode_audio=True,
-                          ignore_eof=False, ffmpeg="ffmpeg", **kwargs) -> typing.Generator[Segment, None, None]:
+    async def transcribe(self, file: typing.Union[asyncio.StreamReader, str], default_interval=5, chunk_margin=2,
+                         decode_audio=True, ignore_eof=False, ffmpeg="ffmpeg", **kwargs
+                         ) -> typing.Generator[Segment, None, None]:
         """
         Transcribe an audio file asynchronously. Takes a file-like object, a few settings for controlling the live
         transcription, and then the normal keyword arguments for WhisperModel.transcode()
@@ -136,7 +137,6 @@ class AsyncLiveWhisper(LiveWhisper):
 
         # Have we reached the end of the file?
         # If we have, allow text transcription to run to the end of the
-        print('asdf')
         end_of_file = False
 
         try:
@@ -155,7 +155,6 @@ class AsyncLiveWhisper(LiveWhisper):
                 segments, audio_info = self.model.transcribe(audio, **kwargs)
 
                 segments = await asyncio.get_running_loop().run_in_executor(self.THREAD_POOL, get_segments, segments)
-                print(segments)
                 for segment in segments:
                     # Once we reach segments that have their ends within the chunk margin, break out
                     # Unless we're at the end of the file, in which case we have no choice

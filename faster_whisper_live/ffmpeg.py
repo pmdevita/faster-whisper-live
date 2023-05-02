@@ -56,8 +56,7 @@ class AsyncFFmpegDecoder:
         self.p = None
 
     async def start(self):
-        # "-loglevel", "quiet",
-        args = [self.ffmpeg,
+        args = [self.ffmpeg, "-loglevel", "quiet",
                 "-i", "pipe:0" if self.is_file else file,
                 "-f", "s16le", "-ac", "1", "-ar", "16000",
                 "-"]
@@ -69,7 +68,6 @@ class AsyncFFmpegDecoder:
     async def send(self):
         try:
             chunk = await self.file.read(1024)
-            print("start send")
             while chunk:
                 await self.p.stdin.drain()
                 self.p.stdin.write(chunk)
@@ -80,7 +78,6 @@ class AsyncFFmpegDecoder:
             traceback.print_exc()
 
     async def read(self, chunk_length: int):
-        print("reading from ffmpeg")
         return await self.p.stdout.read(chunk_length)
 
     def is_done(self):
