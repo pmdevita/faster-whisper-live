@@ -11,7 +11,7 @@ This is still a work in progress, might break sometimes. Contributions welcome a
 
 I'd like to get this in a better state before uploading to PyPI. For now you can do
 
-```pip install pip install git+https://github.com/pmdevita/faster-whisper-live.git```
+```pip install git+https://github.com/pmdevita/faster-whisper-live.git```
 
 or if you're using Poetry
 

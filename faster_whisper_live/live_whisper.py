@@ -5,10 +5,10 @@ import typing
 
 import numpy as np
 from faster_whisper import WhisperModel
-from faster_whisper.transcribe import Segment
 
 from .constants import SAMPLE_RATE
 from .ffmpeg import FFmpegDecoder, AsyncFFmpegDecoder
+from .data import Segment
 
 
 def bytes_length_to_audio_length(data):
@@ -39,7 +39,8 @@ class LiveWhisper:
                                   compute_type=compute_type, cpu_threads=cpu_threads, num_workers=num_workers,
                                   download_root=download_root, local_files_only=local_files_only)
 
-    def transcribe(self, file: typing.Union[typing.BinaryIO, str], default_interval=5, chunk_margin=2, decode_audio=True,
+    def transcribe(self, file: typing.Union[typing.BinaryIO, str], default_interval=5, chunk_margin=2,
+                   decode_audio=True,
                    ignore_eof=False, ffmpeg="ffmpeg", **kwargs) -> typing.Generator[Segment, None, None]:
         """
         Transcribe an audio file. Takes a file-like object, a few settings for controlling the live
@@ -83,9 +84,10 @@ class LiveWhisper:
                     # Once we reach segments that have their ends within the chunk margin, break out
                     # Unless we're at the end of the file, in which case we have no choice
                     if segment.end > chunk_length - chunk_margin and not end_of_file:
-                        break
-                    yield segment
-                    new_start = segment.end
+                        yield Segment(partial=True, **segment._asdict())
+                    else:
+                        yield Segment(partial=False, **segment._asdict())
+                        new_start = segment.end
 
                 # Remove the beginning
                 chunk = chunk[audio_length_to_bytes_length(new_start):]
@@ -103,7 +105,6 @@ class LiveWhisper:
         except KeyboardInterrupt:
             pass
         finally:
-            print("goodbye")
             if decode_audio:
                 f.terminate()
 
@@ -159,9 +160,10 @@ class AsyncLiveWhisper(LiveWhisper):
                     # Once we reach segments that have their ends within the chunk margin, break out
                     # Unless we're at the end of the file, in which case we have no choice
                     if segment.end > chunk_length - chunk_margin and not end_of_file:
-                        break
-                    yield segment
-                    new_start = segment.end
+                        yield Segment(partial=True, **segment._asdict())
+                    else:
+                        yield Segment(partial=False, **segment._asdict())
+                        new_start = segment.end
 
                 # Remove the beginning
                 chunk = chunk[audio_length_to_bytes_length(new_start):]
@@ -181,5 +183,3 @@ class AsyncLiveWhisper(LiveWhisper):
         finally:
             if decode_audio:
                 f.terminate()
-
-
